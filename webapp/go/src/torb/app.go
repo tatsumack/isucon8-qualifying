@@ -265,7 +265,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 			sheet.Mine = res.UserID == loginUserID
 			sheet.Reserved = true
 			sheet.ReservedAtUnix = res.ReservedAt.Unix()
-		} else if err == sql.ErrNoRows {
+		} else {
 			event.Remains++
 			event.Sheets[sheet.Rank].Remains++
 		}
