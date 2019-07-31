@@ -867,14 +867,14 @@ func main() {
 		}
 		defer rows.Close()
 
-		var reports []Report
+		var reports []*Report
 		for rows.Next() {
 			var reservation Reservation
 			var sheet Sheet
 			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num, &sheet.Price, &event.Price); err != nil {
 				return err
 			}
-			report := Report{
+			report := &Report{
 				ReservationID: reservation.ID,
 				EventID:       event.ID,
 				Rank:          sheet.Rank,
@@ -925,7 +925,7 @@ func main() {
 			eventsMap[event.ID] = &event
 		}
 
-		var reports []Report
+		var reports []*Report
 		for rows.Next() {
 			var reservation Reservation
 			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
@@ -938,7 +938,7 @@ func main() {
 				continue
 			}
 
-			report := Report{
+			report := &Report{
 				ReservationID: reservation.ID,
 				EventID:       reservation.EventID,
 				Rank:          sheet.Rank,
@@ -969,7 +969,7 @@ type Report struct {
 	Price         int64
 }
 
-func renderReportCSV(c echo.Context, reports []Report) error {
+func renderReportCSV(c echo.Context, reports []*Report) error {
 	sort.Slice(reports, func(i, j int) bool { return strings.Compare(reports[i].SoldAt, reports[j].SoldAt) < 0 })
 
 	body := bytes.NewBufferString("reservation_id,event_id,rank,num,price,user_id,sold_at,canceled_at\n")
