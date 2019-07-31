@@ -65,7 +65,8 @@ for LOG_PATH in $BACKUP_TARGET_LIST
 do
     LOG_FILE=`basename $LOG_PATH`
     cat <<EOS | ssh $KEY_OPTION $USER@$APP_SERVER sh
-sudo cp $LOG_PATH ${LOG_BACKUP_DIR}/${LOG_FILE}_${LOG_DATE}_${hash}
+sudo mkdir -p ${LOG_BACKUP_DIR}
+sudo mv $LOG_PATH ${LOG_BACKUP_DIR}/${LOG_FILE}_${LOG_DATE}_${hash}
 EOS
 done
 
