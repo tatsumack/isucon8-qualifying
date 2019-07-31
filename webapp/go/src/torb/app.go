@@ -241,14 +241,14 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 
 	reserves, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", eventID)
 
-	sheetMap := map[int64]*Reservation{}
+	resMap := map[int64]*Reservation{}
 	for reserves.Next() {
 		var reservation Reservation
 		err := reserves.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
 		if err != nil {
 			return nil, err
 		}
-		sheetMap[reservation.SheetID] = &reservation
+		resMap[reservation.SheetID] = &reservation
 	}
 
 	for rows.Next() {
@@ -260,7 +260,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
 
-		res, ok := sheetMap[sheet.ID]
+		res, ok := resMap[sheet.ID]
 		if ok {
 			sheet.Mine = res.UserID == loginUserID
 			sheet.Reserved = true
@@ -891,7 +891,7 @@ func main() {
 		return renderReportCSV(c, reports)
 	}, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", func(c echo.Context) error {
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		rows, err := db.Query("select * from reservations order by reserved_at asc")
 		if err != nil {
