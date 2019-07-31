@@ -891,6 +891,8 @@ func main() {
 		return renderReportCSV(c, reports)
 	}, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", func(c echo.Context) error {
+		time.Sleep(30 * time.Second)
+
 		rows, err := db.Query("select * from reservations order by reserved_at asc")
 		if err != nil {
 			return err
