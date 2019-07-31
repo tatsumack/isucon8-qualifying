@@ -897,7 +897,7 @@ func main() {
 		}
 		defer rows.Close()
 
-		sheets, err := db.Query("select `rank`, num, price from sheets")
+		sheets, err := db.Query("select id, `rank`, num, price from sheets")
 		if err != nil {
 			return err
 		}
@@ -905,7 +905,7 @@ func main() {
 		sheetsMap := map[int64]*Sheet{}
 		for sheets.Next() {
 			var sheet Sheet
-			if err := sheets.Scan(&sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+			if err := sheets.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 				return err
 			}
 			sheetsMap[sheet.ID] = &sheet
@@ -931,10 +931,13 @@ func main() {
 			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
 				return err
 			}
-			sheet := sheetsMap[reservation.SheetID]
-			event := eventsMap[reservation.EventID]
-
-			if sheet == nil || event == nil {
+			var ok bool
+			sheet, ok := sheetsMap[reservation.SheetID]
+			if !ok {
+				continue
+			}
+			event, ok := eventsMap[reservation.EventID]
+			if !ok {
 				continue
 			}
 
