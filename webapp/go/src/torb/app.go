@@ -891,23 +891,56 @@ func main() {
 		return renderReportCSV(c, reports)
 	}, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", func(c echo.Context) error {
-		rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, e.id as event_id, e.price as event_price from reservations r inner join sheets s on s.id = r.sheet_id inner join events e on e.id = r.event_id order by reserved_at asc")
+		rows, err := db.Query("select * from reservations order by reserved_at asc")
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
+		sheets, err := db.Query("select `rank`, num, price from sheets")
+		if err != nil {
+			return err
+		}
+		defer sheets.Close()
+		sheetsMap := map[int64]*Sheet{}
+		for sheets.Next() {
+			var sheet Sheet
+			if err := sheets.Scan(&sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+				return err
+			}
+			sheetsMap[sheet.ID] = &sheet
+		}
+
+		events, err := db.Query("select id, price from events")
+		if err != nil {
+			return err
+		}
+		defer events.Close()
+		eventsMap := map[int64]*Event{}
+		for events.Next() {
+			var event Event
+			if err := events.Scan(&event.ID, &event.Price); err != nil {
+				return err
+			}
+			eventsMap[event.ID] = &event
+		}
+
 		var reports []Report
 		for rows.Next() {
 			var reservation Reservation
-			var sheet Sheet
-			var event Event
-			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num, &sheet.Price, &event.ID, &event.Price); err != nil {
+			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
 				return err
 			}
+			sheet := sheetsMap[reservation.SheetID]
+			event := eventsMap[reservation.EventID]
+
+			if sheet == nil || event == nil {
+				continue
+			}
+
 			report := Report{
 				ReservationID: reservation.ID,
-				EventID:       event.ID,
+				EventID:       reservation.EventID,
 				Rank:          sheet.Rank,
 				Num:           sheet.Num,
 				UserID:        reservation.UserID,
