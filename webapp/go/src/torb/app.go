@@ -84,6 +84,8 @@ type Administrator struct {
 	PassHash  string `json:"pass_hash,omitempty"`
 }
 
+var SHEET_MAP map[int64]*Sheet
+
 func sessUserID(c echo.Context) int64 {
 	sess, _ := session.Get("session", c)
 	var userID int64
@@ -233,13 +235,11 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		"C": &Sheets{},
 	}
 
-	rows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
+	reserves, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", eventID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	reserves, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", eventID)
+	defer reserves.Close()
 
 	resMap := map[int64]*Reservation{}
 	for reserves.Next() {
@@ -251,11 +251,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		resMap[reservation.SheetID] = &reservation
 	}
 
-	for rows.Next() {
-		var sheet Sheet
-		if err := rows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-			return nil, err
-		}
+	for _, sheet := range SHEET_MAP {
 		event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
@@ -270,7 +266,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 			event.Sheets[sheet.Rank].Remains++
 		}
 
-		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, &sheet)
+		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, sheet)
 	}
 
 	return &event, nil
@@ -365,6 +361,20 @@ func main() {
 		err := cmd.Run()
 		if err != nil {
 			return nil
+		}
+
+		sheets, err := db.Query("select * from sheets")
+		if err != nil {
+			return err
+		}
+		defer sheets.Close()
+		SHEET_MAP = map[int64]*Sheet{}
+		for sheets.Next() {
+			var sheet Sheet
+			if err := sheets.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+				return err
+			}
+			SHEET_MAP[sheet.ID] = &sheet
 		}
 
 		return c.NoContent(204)
@@ -899,20 +909,6 @@ func main() {
 		}
 		defer rows.Close()
 
-		sheets, err := db.Query("select id, `rank`, num, price from sheets")
-		if err != nil {
-			return err
-		}
-		defer sheets.Close()
-		sheetsMap := map[int64]*Sheet{}
-		for sheets.Next() {
-			var sheet Sheet
-			if err := sheets.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-				return err
-			}
-			sheetsMap[sheet.ID] = &sheet
-		}
-
 		events, err := db.Query("select id, price from events")
 		if err != nil {
 			return err
@@ -934,7 +930,7 @@ func main() {
 				return err
 			}
 			var ok bool
-			sheet, ok := sheetsMap[reservation.SheetID]
+			sheet, ok := SHEET_MAP[reservation.SheetID]
 			if !ok {
 				continue
 			}
