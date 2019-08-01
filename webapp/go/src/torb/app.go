@@ -251,7 +251,18 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		resMap[reservation.SheetID] = &reservation
 	}
 
+	var sheets []*Sheet
 	for _, sheet := range SHEET_MAP {
+		sheets = append(sheets, sheet)
+	}
+	sort.Slice(sheets, func(i, j int) bool {
+		if sheets[i].Rank == sheets[j].Rank {
+			return sheets[i].Num < sheets[j].Num
+		}
+		return sheets[i].Rank < sheets[j].Rank
+	})
+
+	for _, sheet := range sheets {
 		event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
