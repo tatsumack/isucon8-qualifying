@@ -262,7 +262,9 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		return sheets[i].Rank < sheets[j].Rank
 	})
 
-	for _, sheet := range sheets {
+	for _, p := range sheets {
+		sheet := *p
+
 		event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
@@ -277,7 +279,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 			event.Sheets[sheet.Rank].Remains++
 		}
 
-		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, sheet)
+		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, &sheet)
 	}
 
 	return &event, nil
