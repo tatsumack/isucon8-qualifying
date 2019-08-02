@@ -447,7 +447,7 @@ func main() {
 			return resError(c, "forbidden", 403)
 		}
 
-		rows, err := db.Query("SELECT * FROM reservations WHERE user_id = ? ORDER BY IFNULL(r.canceled_at, r.reserved_at) DESC LIMIT 5", user.ID)
+		rows, err := db.Query("SELECT * FROM reservations WHERE user_id = ? ORDER BY IFNULL(canceled_at, reserved_at) DESC LIMIT 5", user.ID)
 		if err != nil {
 			return err
 		}
