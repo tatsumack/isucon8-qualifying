@@ -447,7 +447,7 @@ func main() {
 			return resError(c, "forbidden", 403)
 		}
 
-		rows, err := db.Query("SELECT r.*, s.rank AS sheet_rank, s.num AS sheet_num FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? ORDER BY IFNULL(r.canceled_at, r.reserved_at) DESC LIMIT 5", user.ID)
+		rows, err := db.Query("SELECT * FROM reservations WHERE user_id = ? ORDER BY IFNULL(r.canceled_at, r.reserved_at) DESC LIMIT 5", user.ID)
 		if err != nil {
 			return err
 		}
@@ -456,9 +456,13 @@ func main() {
 		var recentReservations []Reservation
 		for rows.Next() {
 			var reservation Reservation
-			var sheet Sheet
-			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num); err != nil {
+			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
 				return err
+			}
+
+			sheet, ok := SHEET_MAP[reservation.SheetID]
+			if !ok {
+				continue
 			}
 
 			event, err := getEvent(reservation.EventID, -1)
