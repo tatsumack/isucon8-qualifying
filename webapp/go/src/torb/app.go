@@ -229,28 +229,20 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		"C": &Sheets{},
 	}
 
-	reserves, err := db.Query("SELECT * FROM reservations WHERE event_id = ?", eventID)
+	reserves, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", eventID)
 	if err != nil {
 		return nil, err
 	}
 	defer reserves.Close()
 
 	resMap := map[int64]*Reservation{}
-	minResAtMap := map[int64]*time.Time{}
 	for reserves.Next() {
 		var reservation Reservation
 		err := reserves.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
 		if err != nil {
 			return nil, err
 		}
-		if reservation.CanceledAt != nil {
-			continue
-		}
-		time, ok := minResAtMap[reservation.ID]
-		if !ok || reservation.ReservedAt.Before(*time) {
-			resMap[reservation.SheetID] = &reservation
-			minResAtMap[reservation.SheetID] = reservation.ReservedAt
-		}
+		resMap[reservation.SheetID] = &reservation
 	}
 
 	var sheets []*Sheet
